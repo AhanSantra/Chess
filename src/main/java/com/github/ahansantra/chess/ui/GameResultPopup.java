@@ -2,144 +2,140 @@ package com.github.ahansantra.chess.ui;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.geom.RoundRectangle2D;
-import java.awt.image.BufferedImage;
-import java.util.HashMap;
-import java.util.Map;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 
 public class GameResultPopup {
 
-    // Cache for rendered popups
-    private static final Map<String, BufferedImage> popupCache = new HashMap<>();
-
-    public static void showPopup(JFrame parent, ResultType result, String white, String black, boolean winIsWhite) {
-        String key = result.name() + "_" + (winIsWhite ? "white" : "black");
-
-        // Check cache first
-        BufferedImage cached = popupCache.get(key);
-        if (cached == null) {
-            cached = renderPopupImage(result, white, black, winIsWhite);
-            popupCache.put(key, cached);
-        }
-
-        // Dialog setup
+    public static void showPopup(JFrame parent, ResultType result, String white, String black, boolean winIsWhite, Runnable newGame) {
+        // === Dialog setup ===
         JDialog dialog = new JDialog(parent, "Result", true);
         dialog.setUndecorated(true);
-        dialog.setSize(320, 260);
-        dialog.setShape(new RoundRectangle2D.Double(0, 0, 320, 260, 25, 25));
+        dialog.setSize(360, 260);
+        dialog.setLayout(new BorderLayout());
         dialog.setLocationRelativeTo(parent);
 
-        // Use a single panel to paint the cached popup image
-        BufferedImage finalCached = cached;
-        JPanel imagePanel = new JPanel() {
+        // Sharp rectangular frame with drop shadow effect
+        dialog.getRootPane().setBorder(BorderFactory.createLineBorder(new Color(30, 30, 30), 2));
+
+        // Enable high-quality rendering globally
+        System.setProperty("awt.useSystemAAFontSettings", "on");
+        System.setProperty("swing.aatext", "true");
+
+        // === TOP SECTION ===
+        JPanel topPanel = new JPanel(new BorderLayout());
+        topPanel.setBackground(new Color(59, 58, 58));
+        topPanel.setPreferredSize(new Dimension(360, 140));
+
+        // Left Icon
+        JLabel iconLabel = new JLabel();
+        try {
+            iconLabel.setIcon(new ImageIcon("img/icon.png"));
+        } catch (Exception e) {
+            iconLabel.setText("♟");
+            iconLabel.setFont(new Font("SansSerif", Font.BOLD, 48));
+            iconLabel.setForeground(Color.WHITE);
+        }
+        iconLabel.setBorder(BorderFactory.createEmptyBorder(15, 20, 15, 20));
+
+        // Right Texts
+        JPanel textPanel = new JPanel();
+        textPanel.setBackground(new Color(59, 58, 58));
+        textPanel.setLayout(new BoxLayout(textPanel, BoxLayout.Y_AXIS));
+
+        JLabel titleLabel = new JLabel("GAME OVER");
+        titleLabel.setFont(new Font("SansSerif", Font.BOLD, 26));
+        titleLabel.setForeground(Color.WHITE);
+
+        JLabel subtitleLabel = new JLabel(resultToText(result, white, black, winIsWhite));
+        subtitleLabel.setFont(new Font("SansSerif", Font.PLAIN, 16));
+        subtitleLabel.setForeground(new Color(180, 180, 180));
+
+        textPanel.add(Box.createVerticalStrut(10));
+        textPanel.add(titleLabel);
+        textPanel.add(Box.createVerticalStrut(8));
+        textPanel.add(subtitleLabel);
+
+        topPanel.add(iconLabel, BorderLayout.WEST);
+        topPanel.add(textPanel, BorderLayout.CENTER);
+
+        // === BOTTOM SECTION ===
+        JPanel bottomPanel = new JPanel();
+        bottomPanel.setBackground(new Color(15, 15, 15));
+        bottomPanel.setLayout(new BoxLayout(bottomPanel, BoxLayout.Y_AXIS));
+        bottomPanel.setBorder(BorderFactory.createEmptyBorder(20, 25, 20, 25));
+
+        // Main "New Game" button
+        JButton mainButton = createButton("NEW GAME", new Color(34, 197, 94));
+        mainButton.setFont(new Font("SansSerif", Font.BOLD, 16));
+        mainButton.setAlignmentX(Component.CENTER_ALIGNMENT);
+        mainButton.addActionListener(new ActionListener() {
             @Override
-            protected void paintComponent(Graphics g) {
-                super.paintComponent(g);
-                g.drawImage(finalCached, 0, 0, getWidth(), getHeight(), null);
+            public void actionPerformed(ActionEvent actionEvent) {
+                newGame.run();
+                dialog.dispose();
             }
-        };
-        imagePanel.setLayout(null);
+        });
 
-        // Buttons (drawn live, not cached)
-        JButton mainButton = createButton("NEW GAME", new Color(0, 180, 0));
-        JButton menuButton = createButton("MAIN MENU", new Color(70, 70, 70));
-        JButton exitButton = createButton("EXIT", new Color(70, 70, 70));
+        // Smaller buttons
+        JPanel buttonRow = new JPanel(new FlowLayout(FlowLayout.CENTER, 15, 10));
+        buttonRow.setBackground(new Color(15, 15, 15));
 
-        mainButton.setBounds(35, 160, 250, 40);
+        JButton menuButton = createButton("MAIN MENU", new Color(60, 60, 60));
+        JButton exitButton = createButton("EXIT", new Color(60, 60, 60));
 
-        JPanel smallButtons = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 0));
-        smallButtons.setOpaque(false);
-        smallButtons.setBounds(40, 210, 240, 40);
-        smallButtons.add(menuButton);
-        smallButtons.add(exitButton);
+        buttonRow.add(menuButton);
+        buttonRow.add(exitButton);
 
-        imagePanel.add(mainButton);
-        imagePanel.add(smallButtons);
+        bottomPanel.add(mainButton);
+        bottomPanel.add(Box.createVerticalStrut(12));
+        bottomPanel.add(buttonRow);
 
-        dialog.add(imagePanel);
+        // Combine all
+        dialog.add(topPanel, BorderLayout.NORTH);
+        dialog.add(bottomPanel, BorderLayout.CENTER);
+
         dialog.setVisible(true);
     }
 
-    /**
-     * Renders the static parts (title, message, background, icon) into an image
-     * so it can be cached and reused instantly.
-     */
-    private static BufferedImage renderPopupImage(ResultType result, String white, String black, boolean winIsWhite) {
-        int width = 320, height = 260;
-        BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
-        Graphics2D g2 = image.createGraphics();
-
-        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-
-        // Background top (dark grey)
-        g2.setColor(Color.DARK_GRAY);
-        g2.fillRoundRect(0, 0, width, 120, 25, 25);
-
-        // Background bottom (black)
-        g2.setColor(Color.BLACK);
-        g2.fillRect(0, 120, width, height - 120);
-
-        // Icon
-        try {
-            Image img = Toolkit.getDefaultToolkit().getImage("img/icon.png");
-            g2.drawImage(img, 20, 20, 64, 64, null);
-        } catch (Exception e) {
-            g2.setFont(new Font("Arial", Font.BOLD, 40));
-            g2.setColor(Color.WHITE);
-            g2.drawString("♟", 40, 70);
-        }
-
-        // Title
-        g2.setFont(new Font("Arial", Font.BOLD, 20));
-        g2.setColor(Color.WHITE);
-        g2.drawString("Game Over", 100, 55);
-
-        // Subtitle
-        g2.setFont(new Font("Arial", Font.PLAIN, 13));
-        g2.setColor(Color.LIGHT_GRAY);
-        String text = resultToText(result, white, black, winIsWhite);
-        g2.drawString(text, 100, 80);
-
-        g2.dispose();
-        return image;
-    }
-
+    // === Button Styling ===
     private static JButton createButton(String text, Color bg) {
         JButton b = new JButton(text);
         b.setBackground(bg);
         b.setForeground(Color.WHITE);
-        b.setFont(new Font("Arial", Font.BOLD, 14));
         b.setFocusPainted(false);
         b.setBorderPainted(false);
+        b.setFont(new Font("SansSerif", Font.BOLD, 14));
+        b.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        b.setPreferredSize(new Dimension(130, 38));
+
+        // Subtle hover effect
+        b.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseEntered(java.awt.event.MouseEvent e) {
+                b.setBackground(bg.brighter());
+            }
+            @Override
+            public void mouseExited(java.awt.event.MouseEvent e) {
+                b.setBackground(bg);
+            }
+        });
         return b;
     }
 
-    // === Helper to generate message text ===
+    // === Result Text ===
     private static String resultToText(ResultType result, String white, String black, boolean winIsWhite) {
-        switch (result) {
-            case CHECKMATE:
-                return (winIsWhite ? white : black) + " wins by checkmate!";
-            case STALEMATE:
-                return "Game drawn by stalemate.";
-            case THREEFOLD:
-                return "Draw by threefold repetition.";
-            case FIFTYMOVEPAWN:
-                return "Draw by 50-move rule.";
-            case TIMEOUT:
-                return (winIsWhite ? white : black) + " wins on time!";
-            case RESIGNATION:
-                return (winIsWhite ? white : black) + " wins by resignation.";
-            default:
-                return "Game ended.";
-        }
+        return switch (result) {
+            case CHECKMATE -> (winIsWhite ? white : black) + " wins by checkmate!";
+            case STALEMATE -> "Draw by stalemate.";
+            case THREEFOLD -> "Draw by threefold repetition.";
+            case FIFTYMOVEPAWN -> "Draw by 50-move rule.";
+            case TIMEOUT -> (winIsWhite ? white : black) + " wins on time!";
+            case RESIGNATION -> (winIsWhite ? white : black) + " wins by resignation.";
+        };
     }
 
     public enum ResultType {
-        CHECKMATE,
-        STALEMATE,
-        THREEFOLD,
-        FIFTYMOVEPAWN,
-        TIMEOUT,
-        RESIGNATION
+        CHECKMATE, STALEMATE, THREEFOLD, FIFTYMOVEPAWN, TIMEOUT, RESIGNATION
     }
 }

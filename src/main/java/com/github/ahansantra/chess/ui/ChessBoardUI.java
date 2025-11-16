@@ -162,7 +162,8 @@ public class ChessBoardUI {
                                 GameResultPopup.ResultType.STALEMATE,
                                 "White",
                                 "Black",
-                                false
+                                false,
+                                () -> {}
                         );
                     } else if (gameBoard.condition.startsWith("Checkmate_")) {
                         String winner = gameBoard.condition.substring(10);
@@ -172,7 +173,8 @@ public class ChessBoardUI {
                                     GameResultPopup.ResultType.CHECKMATE,
                                     "White",
                                     "Black",
-                                    true
+                                    true,
+                                    () -> {}
                             );
                         } else if (winner.equalsIgnoreCase("Black")) {
                             GameResultPopup.showPopup(
@@ -180,7 +182,8 @@ public class ChessBoardUI {
                                     GameResultPopup.ResultType.CHECKMATE,
                                     "White",
                                     "Black",
-                                    false
+                                    false,
+                                    () -> {}
                             );
                         }
                     }

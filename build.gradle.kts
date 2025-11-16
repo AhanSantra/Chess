@@ -15,6 +15,7 @@ dependencies {
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
     implementation("org.postgresql:postgresql:42.7.3")
     implementation("org.json:json:20230227")
+    implementation("org.xerial:sqlite-jdbc:3.42.0.0")
 }
 
 tasks.test {
